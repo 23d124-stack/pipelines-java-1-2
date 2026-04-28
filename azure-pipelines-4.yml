@@ -1,0 +1,52 @@
+trigger:
+- main                         # Trigger pipeline when code is pushed to main branch
+
+pool:
+  vmImage: 'ubuntu-latest'      # Use Ubuntu virtual machine agent
+
+stages:
+
+# ---------------- BUILD STAGE ----------------
+- stage: Build
+  displayName: 'Build Stage'
+
+  jobs:
+  - job: MavenBuild
+    displayName: 'Maven Build Job'
+
+    steps:
+
+    - task: Maven@3
+      displayName: 'Compile and Package Application'
+      inputs:
+        mavenPomFile: 'pom.xml'         # Uses pom.xml file
+        goals: 'clean package'          # Cleans old files and creates new build package
+        publishJUnitResults: true       # Publish test results
+        testResultsFiles: '**/surefire-reports/TEST-*.xml'
+        javaHomeOption: 'JDKVersion'
+        jdkVersionOption: '1.17'        # Use Java 17
+        mavenVersionOption: 'Default'
+
+
+# ---------------- TEST STAGE ----------------
+- stage: Test
+  displayName: 'Test Stage'
+  dependsOn: Build                # Runs only after Build succeeds
+  isSkippable: false
+
+  jobs:
+  - job: MavenTest
+    displayName: 'Maven Test Job'
+
+    steps:
+
+    - task: Maven@3
+      displayName: 'Run Unit Tests'
+      inputs:
+        mavenPomFile: 'pom.xml'
+        goals: 'test'              # Execute unit tests
+        publishJUnitResults: true
+        testResultsFiles: '**/surefire-reports/TEST-*.xml'
+        javaHomeOption: 'JDKVersion'
+        jdkVersionOption: '1.17'
+        mavenVersionOption: 'Default'
